@@ -1,0 +1,106 @@
+@page "{id:int}"
+@model NorthwindApp.Pages.Products.DetailsModel
+@{
+    ViewData["Title"] = $"Product - {Model.Product?.ProductName}";
+    ViewData["Error"] = Model.Error;
+}
+
+@if (Model.Product != null)
+{
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-page="/Index">Dashboard</a></li>
+            <li class="breadcrumb-item"><a asp-page="/Products">Products</a></li>
+            <li class="breadcrumb-item active">@Model.Product.ProductName</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">@Model.Product.ProductName</h5>
+                    @if (Model.Product.Discontinued)
+                    {
+                        <span class="badge bg-danger">Discontinued</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-success">Active</span>
+                    }
+                </div>
+                <div class="card-body">
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small">Product ID</label>
+                            <p class="mb-3">@Model.Product.ProductID</p>
+
+                            <label class="form-label text-muted small">Category</label>
+                            <p class="mb-3"><span class="badge bg-light text-dark">@Model.Product.CategoryName</span></p>
+
+                            <label class="form-label text-muted small">Supplier</label>
+                            <p class="mb-3">@Model.Product.SupplierName</p>
+
+                            <label class="form-label text-muted small">Quantity Per Unit</label>
+                            <p class="mb-0">@Model.Product.QuantityPerUnit</p>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small">Unit Price</label>
+                            <p class="mb-3 h4">£@Model.Product.UnitPrice?.ToString("N2")</p>
+
+                            <label class="form-label text-muted small">Units In Stock</label>
+                            <p class="mb-3">@Model.Product.UnitsInStock</p>
+
+                            <label class="form-label text-muted small">Units On Order</label>
+                            <p class="mb-3">@Model.Product.UnitsOnOrder</p>
+
+                            <label class="form-label text-muted small">Reorder Level</label>
+                            <p class="mb-0">@Model.Product.ReorderLevel</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer d-flex justify-content-between">
+                    <a asp-page="/Products" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i>Back to Products
+                    </a>
+                    <div>
+                        <a asp-page="/Products/Edit" asp-route-id="@Model.Product.ProductID" class="btn btn-primary">
+                            <i class="bi bi-pencil me-1"></i>Edit
+                        </a>
+                        <a asp-page="/Products/Delete" asp-route-id="@Model.Product.ProductID" class="btn btn-outline-danger ms-2">
+                            <i class="bi bi-trash me-1"></i>Delete
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-graph-up me-2"></i>Stock Status
+                </div>
+                <div class="card-body text-center">
+                    @{
+                        var stockPercentage = Model.Product.ReorderLevel > 0 
+                            ? Math.Min(100, (Model.Product.UnitsInStock ?? 0) * 100 / Model.Product.ReorderLevel.Value) 
+                            : 100;
+                        var stockColor = stockPercentage >= 50 ? "success" : stockPercentage >= 25 ? "warning" : "danger";
+                    }
+                    <div class="display-4 mb-2">@Model.Product.UnitsInStock</div>
+                    <div class="text-muted mb-3">Units in stock</div>
+                    <div class="progress" style="height: 10px;">
+                        <div class="progress-bar bg-@stockColor" style="width: @stockPercentage%"></div>
+                    </div>
+                    <small class="text-muted">Reorder at @Model.Product.ReorderLevel units</small>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle me-2"></i>Product not found
+    </div>
+    <a asp-page="/Products" class="btn btn-primary">Back to Products</a>
+}

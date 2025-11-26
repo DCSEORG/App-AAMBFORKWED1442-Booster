@@ -1,0 +1,55 @@
+# Northwind App Modernization - .gitignore
+
+# Build outputs
+bin/
+obj/
+out/
+
+# .NET specific
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.userprefs
+project.lock.json
+*.nuget.props
+*.nuget.targets
+
+# IDE files
+.idea/
+.vs/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Dependencies (but NOT app.zip)
+node_modules/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.env
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+
+# Logs
+*.log
+logs/
+
+# Backup files created during sed operations
+*.bak
+
+# Do NOT ignore app.zip - it's needed for deployment
+# !app.zip
