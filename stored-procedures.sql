@@ -147,6 +147,14 @@ CREATE OR ALTER PROCEDURE sp_DeleteProduct
 AS
 BEGIN
     SET NOCOUNT ON;
+    
+    -- Check for dependent order details
+    IF EXISTS (SELECT 1 FROM OrderDetails WHERE ProductID = @ProductID)
+    BEGIN
+        RAISERROR('Cannot delete product. It is referenced in order details.', 16, 1);
+        RETURN;
+    END
+    
     DELETE FROM Products WHERE ProductID = @ProductID;
     SELECT @@ROWCOUNT AS RowsAffected;
 END
@@ -527,11 +535,20 @@ CREATE OR ALTER PROCEDURE sp_DeleteOrder
 AS
 BEGIN
     SET NOCOUNT ON;
-    -- Delete order details first
-    DELETE FROM OrderDetails WHERE OrderID = @OrderID;
-    -- Then delete the order
-    DELETE FROM Orders WHERE OrderID = @OrderID;
-    SELECT @@ROWCOUNT AS RowsAffected;
+    BEGIN TRY
+        BEGIN TRANSACTION;
+        -- Delete order details first
+        DELETE FROM OrderDetails WHERE OrderID = @OrderID;
+        -- Then delete the order
+        DELETE FROM Orders WHERE OrderID = @OrderID;
+        COMMIT TRANSACTION;
+        SELECT @@ROWCOUNT AS RowsAffected;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
 END
 GO
 

@@ -2,14 +2,15 @@
 """
 Execute stored procedures SQL script on Azure SQL Database using Azure Active Directory authentication
 """
+import os
 import pyodbc
 import struct
 from azure.identity import AzureCliCredential
 
-# Database connection settings
-SERVER = "example.database.windows.net"
-DATABASE = "database_name"
-SQL_SCRIPT_FILE = "stored-procedures.sql"
+# Database connection settings - can be overridden by environment variables
+SERVER = os.environ.get("SQL_SERVER", "example.database.windows.net")
+DATABASE = os.environ.get("SQL_DATABASE", "database_name")
+SQL_SCRIPT_FILE = os.environ.get("SQL_SCRIPT_FILE", "stored-procedures.sql")
 
 def get_access_token():
     """Get Azure AD access token using Azure CLI credentials"""

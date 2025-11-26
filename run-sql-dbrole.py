@@ -3,14 +3,15 @@
 Execute SQL script on Azure SQL Database using Azure Active Directory authentication
 Sets up database roles for the managed identity
 """
+import os
 import pyodbc
 import struct
 from azure.identity import AzureCliCredential
 
-# Database connection settings
-SERVER = "example.database.windows.net"
-DATABASE = "database_name"
-SQL_SCRIPT_FILE = "script.sql"
+# Database connection settings - can be overridden by environment variables
+SERVER = os.environ.get("SQL_SERVER", "example.database.windows.net")
+DATABASE = os.environ.get("SQL_DATABASE", "database_name")
+SQL_SCRIPT_FILE = os.environ.get("SQL_SCRIPT_FILE", "script.sql")
 
 def get_access_token():
     """Get Azure AD access token using Azure CLI credentials"""

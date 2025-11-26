@@ -86,35 +86,29 @@ echo ""
 echo "Step 6: Installing Python dependencies..."
 pip3 install --quiet pyodbc azure-identity
 
-# Step 7: Update Python scripts with actual server/database values
+# Step 7: Set environment variables and update script.sql for Python scripts
 echo ""
-echo "Step 7: Updating Python scripts with deployment values..."
-sed -i.bak "s/example.database.windows.net/${SQL_SERVER_FQDN}/g" run-sql.py && rm -f run-sql.py.bak
-sed -i.bak "s/database_name/${SQL_DATABASE_NAME}/g" run-sql.py && rm -f run-sql.py.bak
+echo "Step 7: Setting environment variables for Python scripts..."
+export SQL_SERVER="${SQL_SERVER_FQDN}"
+export SQL_DATABASE="${SQL_DATABASE_NAME}"
 
-sed -i.bak "s/example.database.windows.net/${SQL_SERVER_FQDN}/g" run-sql-dbrole.py && rm -f run-sql-dbrole.py.bak
-sed -i.bak "s/database_name/${SQL_DATABASE_NAME}/g" run-sql-dbrole.py && rm -f run-sql-dbrole.py.bak
-
-sed -i.bak "s/example.database.windows.net/${SQL_SERVER_FQDN}/g" run-sql-stored-procs.py && rm -f run-sql-stored-procs.py.bak
-sed -i.bak "s/database_name/${SQL_DATABASE_NAME}/g" run-sql-stored-procs.py && rm -f run-sql-stored-procs.py.bak
-
-# Update script.sql with managed identity name
+# Update script.sql with managed identity name (still needed for the SQL script content)
 sed -i.bak "s/MANAGED-IDENTITY-NAME/${MANAGED_IDENTITY_NAME}/g" script.sql && rm -f script.sql.bak
 
 # Step 8: Import database schema
 echo ""
 echo "Step 8: Importing database schema..."
-python3 run-sql.py
+SQL_SCRIPT_FILE="Database-Schema/database_schema.sql" python3 run-sql.py
 
 # Step 9: Configure managed identity database roles
 echo ""
 echo "Step 9: Configuring managed identity database roles..."
-python3 run-sql-dbrole.py
+SQL_SCRIPT_FILE="script.sql" python3 run-sql-dbrole.py
 
 # Step 10: Create stored procedures
 echo ""
 echo "Step 10: Creating stored procedures..."
-python3 run-sql-stored-procs.py
+SQL_SCRIPT_FILE="stored-procedures.sql" python3 run-sql-stored-procs.py
 
 # Step 11: Deploy application code
 echo ""
