@@ -1,0 +1,306 @@
+@page
+@model NorthwindApp.Pages.ChatModel
+@{
+    ViewData["Title"] = "AI Assistant";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card" style="height: 80vh;">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="bi bi-chat-dots me-2"></i>
+                    <strong>Northwind AI Assistant</strong>
+                    @if (Model.IsGenAIEnabled)
+                    {
+                        <span class="badge bg-success ms-2">AI Enabled</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-warning text-dark ms-2">Demo Mode</span>
+                    }
+                </div>
+                <button id="clearChat" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-trash me-1"></i>Clear
+                </button>
+            </div>
+            <div class="card-body d-flex flex-column p-0">
+                <div id="chatMessages" class="flex-grow-1 overflow-auto p-3" style="background: #f8fafc;">
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-chat-dots" style="font-size: 3rem; opacity: 0.3;"></i>
+                        <p class="mt-3">Start a conversation with the AI assistant</p>
+                        <p class="small">Try asking: "Show me all products" or "What products are low on stock?"</p>
+                    </div>
+                </div>
+                <div class="border-top p-3">
+                    <form id="chatForm" class="d-flex gap-2">
+                        <input type="text" id="userMessage" class="form-control" placeholder="Ask me about products, customers, orders..." autocomplete="off">
+                        <button type="submit" class="btn btn-primary px-4" id="sendButton">
+                            <i class="bi bi-send"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .chat-message {
+        max-width: 80%;
+        margin-bottom: 1rem;
+        animation: fadeIn 0.3s ease-in;
+    }
+    .chat-message.user {
+        margin-left: auto;
+    }
+    .chat-message.assistant {
+        margin-right: auto;
+    }
+    .message-bubble {
+        padding: 0.75rem 1rem;
+        border-radius: 1rem;
+        word-wrap: break-word;
+    }
+    .user .message-bubble {
+        background: var(--primary-color, #4f46e5);
+        color: white;
+        border-bottom-right-radius: 0.25rem;
+    }
+    .assistant .message-bubble {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-bottom-left-radius: 0.25rem;
+    }
+    .message-time {
+        font-size: 0.7rem;
+        color: #94a3b8;
+        margin-top: 0.25rem;
+    }
+    .typing-indicator {
+        display: flex;
+        gap: 4px;
+        padding: 0.75rem 1rem;
+    }
+    .typing-indicator span {
+        width: 8px;
+        height: 8px;
+        background: #94a3b8;
+        border-radius: 50%;
+        animation: typing 1.4s infinite;
+    }
+    .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+    @@keyframes typing {
+        0%, 60%, 100% { transform: translateY(0); }
+        30% { transform: translateY(-4px); }
+    }
+    @@keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .assistant .message-bubble ul,
+    .assistant .message-bubble ol {
+        margin: 0.5rem 0;
+        padding-left: 1.5rem;
+    }
+    .assistant .message-bubble li {
+        margin-bottom: 0.25rem;
+    }
+    .assistant .message-bubble code {
+        background: #f1f5f9;
+        padding: 0.125rem 0.375rem;
+        border-radius: 0.25rem;
+        font-size: 0.875rem;
+    }
+    .assistant .message-bubble pre {
+        background: #1e293b;
+        color: #e2e8f0;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin: 0.5rem 0;
+        overflow-x: auto;
+    }
+    .assistant .message-bubble pre code {
+        background: transparent;
+        padding: 0;
+        color: inherit;
+    }
+</style>
+
+@section Scripts {
+<script>
+    const chatMessages = document.getElementById('chatMessages');
+    const chatForm = document.getElementById('chatForm');
+    const userMessage = document.getElementById('userMessage');
+    const sendButton = document.getElementById('sendButton');
+    const clearChat = document.getElementById('clearChat');
+    
+    let conversationHistory = [];
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function formatResponse(text) {
+        // First escape HTML to prevent XSS
+        let formatted = escapeHtml(text);
+        
+        // Convert markdown-style formatting
+        // Bold: **text** -> <strong>text</strong>
+        formatted = formatted.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        
+        // Code blocks: ```code``` -> <pre><code>code</code></pre>
+        formatted = formatted.replace(/```([^`]+)```/g, '<pre><code>$1</code></pre>');
+        
+        // Inline code: `code` -> <code>code</code>
+        formatted = formatted.replace(/`([^`]+)`/g, '<code>$1</code>');
+        
+        // Process lists
+        const lines = formatted.split('\n');
+        let inList = false;
+        let listType = '';
+        let result = [];
+        
+        for (let line of lines) {
+            const numberedMatch = line.match(/^(\d+)\.\s+(.+)$/);
+            const bulletMatch = line.match(/^[-*]\s+(.+)$/);
+            
+            if (numberedMatch) {
+                if (!inList || listType !== 'ol') {
+                    if (inList) result.push(listType === 'ol' ? '</ol>' : '</ul>');
+                    result.push('<ol>');
+                    inList = true;
+                    listType = 'ol';
+                }
+                result.push(`<li>${numberedMatch[2]}</li>`);
+            } else if (bulletMatch) {
+                if (!inList || listType !== 'ul') {
+                    if (inList) result.push(listType === 'ol' ? '</ol>' : '</ul>');
+                    result.push('<ul>');
+                    inList = true;
+                    listType = 'ul';
+                }
+                result.push(`<li>${bulletMatch[1]}</li>`);
+            } else {
+                if (inList) {
+                    result.push(listType === 'ol' ? '</ol>' : '</ul>');
+                    inList = false;
+                    listType = '';
+                }
+                result.push(line);
+            }
+        }
+        
+        if (inList) {
+            result.push(listType === 'ol' ? '</ol>' : '</ul>');
+        }
+        
+        // Join and convert line breaks
+        formatted = result.join('\n').replace(/\n/g, '<br>');
+        
+        return formatted;
+    }
+
+    function addMessage(text, isUser, timestamp = new Date()) {
+        // Clear welcome message if present
+        const welcome = chatMessages.querySelector('.text-center');
+        if (welcome) welcome.remove();
+
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `chat-message ${isUser ? 'user' : 'assistant'}`;
+        
+        const bubble = document.createElement('div');
+        bubble.className = 'message-bubble';
+        
+        if (isUser) {
+            bubble.textContent = text;
+        } else {
+            bubble.innerHTML = formatResponse(text);
+        }
+        
+        const time = document.createElement('div');
+        time.className = `message-time ${isUser ? 'text-end' : ''}`;
+        time.textContent = timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        
+        messageDiv.appendChild(bubble);
+        messageDiv.appendChild(time);
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function addTypingIndicator() {
+        const indicator = document.createElement('div');
+        indicator.className = 'chat-message assistant';
+        indicator.id = 'typingIndicator';
+        indicator.innerHTML = `
+            <div class="message-bubble">
+                <div class="typing-indicator">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+        `;
+        chatMessages.appendChild(indicator);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function removeTypingIndicator() {
+        const indicator = document.getElementById('typingIndicator');
+        if (indicator) indicator.remove();
+    }
+
+    chatForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const message = userMessage.value.trim();
+        if (!message) return;
+        
+        addMessage(message, true);
+        userMessage.value = '';
+        sendButton.disabled = true;
+        
+        conversationHistory.push({ role: 'user', content: message });
+        
+        addTypingIndicator();
+        
+        try {
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: message,
+                    history: conversationHistory.slice(-10) // Keep last 10 messages for context
+                })
+            });
+            
+            const data = await response.json();
+            removeTypingIndicator();
+            
+            addMessage(data.response, false);
+            conversationHistory.push({ role: 'assistant', content: data.response });
+        } catch (error) {
+            removeTypingIndicator();
+            addMessage('Sorry, I encountered an error. Please try again.', false);
+            console.error('Chat error:', error);
+        }
+        
+        sendButton.disabled = false;
+        userMessage.focus();
+    });
+
+    clearChat.addEventListener('click', () => {
+        chatMessages.innerHTML = `
+            <div class="text-center text-muted py-4">
+                <i class="bi bi-chat-dots" style="font-size: 3rem; opacity: 0.3;"></i>
+                <p class="mt-3">Start a conversation with the AI assistant</p>
+                <p class="small">Try asking: "Show me all products" or "What products are low on stock?"</p>
+            </div>
+        `;
+        conversationHistory = [];
+    });
+
+    userMessage.focus();
+</script>
+}

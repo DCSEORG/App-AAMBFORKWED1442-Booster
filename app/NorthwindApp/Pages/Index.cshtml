@@ -1,0 +1,142 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Dashboard";
+    ViewData["Error"] = Model.Error;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1">Dashboard</h1>
+        <p class="text-muted mb-0">Welcome to Northwind Traders - Your inventory management system</p>
+    </div>
+    <a asp-page="/Products/Create" class="btn btn-primary">
+        <i class="bi bi-plus-lg me-1"></i>Add Product
+    </a>
+</div>
+
+<!-- Stats Cards -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3 col-sm-6">
+        <div class="stat-card">
+            <div class="stat-label">Total Products</div>
+            <div class="stat-value">@Model.Stats?.TotalProducts</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="stat-card">
+            <div class="stat-label">Active Products</div>
+            <div class="stat-value text-success">@Model.Stats?.ActiveProducts</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="stat-card">
+            <div class="stat-label">Total Customers</div>
+            <div class="stat-value">@Model.Stats?.TotalCustomers</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="stat-card">
+            <div class="stat-label">Total Orders</div>
+            <div class="stat-value">@Model.Stats?.TotalOrders</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Recent Products -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-box me-2"></i>Recent Products</span>
+                <a asp-page="/Products" class="btn btn-outline-primary btn-sm">View All</a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Product Name</th>
+                                <th>Category</th>
+                                <th>Unit Price</th>
+                                <th>In Stock</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var product in Model.Products.Take(10))
+                            {
+                                <tr>
+                                    <td>
+                                        <a asp-page="/Products/Details" asp-route-id="@product.ProductID" class="text-decoration-none fw-medium">
+                                            @product.ProductName
+                                        </a>
+                                    </td>
+                                    <td><span class="badge bg-light text-dark">@product.CategoryName</span></td>
+                                    <td>£@product.UnitPrice?.ToString("N2")</td>
+                                    <td>@product.UnitsInStock</td>
+                                    <td>
+                                        @if (product.Discontinued)
+                                        {
+                                            <span class="badge bg-danger">Discontinued</span>
+                                        }
+                                        else if (product.UnitsInStock <= product.ReorderLevel)
+                                        {
+                                            <span class="badge bg-warning text-dark">Low Stock</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-success">In Stock</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Categories Summary -->
+    <div class="col-lg-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-tags me-2"></i>Categories
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    @foreach (var category in Model.Categories.Take(6))
+                    {
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            @category.CategoryName
+                            <span class="badge bg-primary rounded-pill">@category.CategoryID</span>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-info-circle me-2"></i>Quick Links
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a asp-page="/Products" class="btn btn-outline-primary">
+                        <i class="bi bi-box me-2"></i>Manage Products
+                    </a>
+                    <a asp-page="/Customers" class="btn btn-outline-primary">
+                        <i class="bi bi-people me-2"></i>View Customers
+                    </a>
+                    <a asp-page="/Chat" class="btn btn-outline-primary">
+                        <i class="bi bi-chat-dots me-2"></i>AI Assistant
+                    </a>
+                    <a href="/swagger" target="_blank" class="btn btn-outline-secondary">
+                        <i class="bi bi-code-slash me-2"></i>API Documentation
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
